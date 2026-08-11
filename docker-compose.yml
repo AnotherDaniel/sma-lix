@@ -1,0 +1,47 @@
+# Example deployment. Host networking is required so the SHM2 source can
+# receive SMA Speedwire multicast, and so MQTT/HTTP can reach devices on your
+# LAN. Adjust the environment variables to match your setup; every plugin is
+# disabled by default.
+services:
+  sma-lix:
+    build: .
+    image: sma-lix:latest
+    container_name: sma-lix
+    network_mode: host
+    restart: unless-stopped
+    # Uncomment if you manage the MQTT broker from this same compose file:
+    # depends_on:
+    #   - mosquitto
+    environment:
+      - SMAHUB_VERBOSE=true
+
+      # --- Sources ---
+      - SHM2_ENABLED=true
+
+      - TRIPOWERX_ENABLED=false
+      - TRIPOWERX_ADDRESS=192.0.2.1
+      - TRIPOWERX_USER=user
+      - TRIPOWERX_PASSWORD=password
+      - TRIPOWERX_PROTOCOL=https
+      - TRIPOWERX_VERIFYTLS=false
+
+      - EVCHARGER_ENABLED=false
+      - EVCHARGER_ADDRESS=192.0.2.4
+      - EVCHARGER_USER=user
+      - EVCHARGER_PASSWORD=password
+      - EVCHARGER_PROTOCOL=https
+      - EVCHARGER_VERIFYTLS=false
+
+      # --- Sinks ---
+      - MQTT_ENABLED=false
+      - MQTT_ADDRESS=192.0.2.2
+      - MQTT_PORT=1883
+      - MQTT_USER=user
+      - MQTT_PASSWORD=password
+
+      - HA_MQTT_ENABLED=false
+      - HA_MQTT_ADDRESS=192.0.2.3
+
+      - GENHASENSORS_ENABLED=false
+      - GENHASENSORS_GENERATEFREQ=600
+      - GENHASENSORS_FILEPREFIX=hasensors_

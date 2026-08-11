@@ -1,0 +1,14 @@
+# Build artefacts and deps (rebuilt in the image)
+_build/
+deps/
+.elixir_ls/
+cover/
+doc/
+
+# VCS and local files
+.git/
+.gitignore
+*.tar
+
+# Editor / OS
+.DS_Store
