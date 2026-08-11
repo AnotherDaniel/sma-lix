@@ -24,7 +24,7 @@ defmodule SmaLix.Sources.SHM2 do
          {:ok, socket} <-
            :gen_udp.open(port,
              mode: :binary,
-             active: true,
+             active: 100,
              reuseaddr: true,
              add_membership: {group_addr, bind_addr}
            ) do
@@ -44,6 +44,22 @@ defmodule SmaLix.Sources.SHM2 do
   end
 
   @impl true
+  @impl true
+  def handle_message({:udp_passive, socket}, state) do
+    :inet.setopts(socket, active: 100)
+    {:noreply, state}
+  end
+
+  def handle_message({:udp_closed, _socket}, state) do
+    Logger.error("SHM2 UDP socket closed unexpectedly")
+    {:stop, :socket_closed, state}
+  end
+
+  def handle_message({:udp_error, _socket, reason}, state) do
+    Logger.error("SHM2 UDP socket error: #{inspect(reason)}")
+    {:stop, reason, state}
+  end
+
   def handle_message({:udp, _socket, _ip, _port, data}, state) do
     now = System.monotonic_time(:millisecond)
 

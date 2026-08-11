@@ -33,7 +33,7 @@ defmodule SmaLix.Application do
       )
     ]
 
-    opts = [strategy: :one_for_one, name: SmaLix.Supervisor]
+    opts = [strategy: :rest_for_one, name: SmaLix.Supervisor]
     Supervisor.start_link(children, opts)
   end
 

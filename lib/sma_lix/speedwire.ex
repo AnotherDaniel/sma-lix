@@ -83,11 +83,17 @@ defmodule SmaLix.Speedwire do
   """
   @spec decode(binary()) :: %{optional(String.t()) => term()}
   def decode(<<"SMA", _::binary>> = datagram) do
-    <<_::binary-size(12), datalength::unsigned-big-16, _::binary>> = datagram
-    datalength = datalength + 16
+    <<
+      _header::binary-size(12),
+      datalength::unsigned-big-16,
+      _skip1::binary-size(2),
+      protocol::unsigned-big-16,
+      _skip2::binary-size(2),
+      serial::unsigned-big-32,
+      _rest::binary
+    >> = datagram
 
-    <<_::binary-size(16), protocol::unsigned-big-16, _::binary>> = datagram
-    <<_::binary-size(20), serial::unsigned-big-32, _::binary>> = datagram
+    datalength = datalength + 16
 
     base = %{"serial" => serial, "protocol" => protocol}
 
