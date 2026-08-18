@@ -1,0 +1,125 @@
+name: CI
+
+# Runs on every push and pull request. Configure branch protection on `main`
+# to require the "Test" and "Static analysis" checks so PRs can only merge once
+# they are green (see .github/README once set up, or the repo settings).
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+# Cancel superseded runs for the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  MIX_ENV: test
+
+jobs:
+  test:
+    name: Test (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Lower bound supported by mix.exs (elixir "~> 1.16").
+          - elixir: "1.16.3"
+            otp: "26.2.5"
+          # Versions used to build the release image (see Dockerfile).
+          - elixir: "1.18.4"
+            otp: "27.3.4"
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir/OTP
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Cache deps and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install dependencies
+        run: mix deps.get --check-locked
+
+      - name: Compile (warnings as errors)
+        run: mix compile --warnings-as-errors
+
+      - name: Run tests
+        run: mix test --warnings-as-errors
+
+  static-analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    env:
+      # Dialyzer and formatting checks run in dev so the dev-only tooling
+      # (dialyxir, ex_doc) is available.
+      MIX_ENV: dev
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir/OTP
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18.4"
+          otp-version: "27.3.4"
+
+      - name: Cache deps and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-lint-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-lint-
+
+      - name: Install dependencies
+        run: mix deps.get --check-locked
+
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      - name: Check for unused/stale deps in mix.lock
+        run: mix deps.unlock --check-unused
+
+      - name: Audit for retired Hex packages
+        run: mix hex.audit
+
+      - name: Audit dependencies for known vulnerabilities
+        run: mix deps.audit
+
+      - name: Compile (warnings as errors)
+        run: mix compile --warnings-as-errors
+
+      - name: Lint with Credo
+        run: mix credo
+
+      - name: Restore Dialyzer PLT
+        uses: actions/cache@v4
+        with:
+          path: priv/plts
+          key: ${{ runner.os }}-dialyzer-plt-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dialyzer-plt-
+
+      - name: Build Dialyzer PLT
+        run: mix dialyzer --plt
+
+      - name: Run Dialyzer
+        run: mix dialyzer --format github

@@ -45,9 +45,8 @@ defmodule SmaLix.SensorRegistry do
   @doc "Returns the sensor definition matching `key` within `device`, or nil."
   @spec sensor(String.t(), String.t()) :: SmaLix.Sensor.t() | nil
   def sensor(device, key) do
-    with sensors when is_list(sensors) <- get(device) do
-      Enum.find(sensors, fn s -> s.key == key end)
-    else
+    case get(device) do
+      sensors when is_list(sensors) -> Enum.find(sensors, fn s -> s.key == key end)
       _ -> nil
     end
   end

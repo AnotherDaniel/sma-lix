@@ -1,0 +1,128 @@
+name: Release
+
+# Triggered when a version tag (e.g. v1.2.3) is pushed. Produces:
+#   1. HTML documentation, attached to the GitHub Release as an artifact.
+#   2. Multi-arch (linux/amd64 + linux/arm64) container images pushed to GHCR.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # create the GitHub Release and upload assets
+  packages: write # push images to GHCR
+  security-events: write # upload Trivy scan results to the Security tab
+
+env:
+  REGISTRY: ghcr.io
+  # Lower-cased automatically by docker/metadata-action.
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir/OTP
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18.4"
+          otp-version: "27.3.4"
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Build documentation
+        run: mix docs
+
+      - name: Package documentation
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          tar -czf "sma_lix-docs-${version}.tar.gz" -C doc .
+
+      - name: Upload documentation as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: sma_lix-docs-*.tar.gz
+
+      - name: Attach documentation to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sma_lix-docs-*.tar.gz
+          generate_release_notes: true
+
+  image:
+    name: Container image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (for arm64 emulation)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lower-case the image name
+        id: image
+        run: echo "name=${IMAGE_NAME,,}" >> "$GITHUB_OUTPUT"
+        env:
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+
+      - name: Derive image tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+          # Tag the highest stable release as `latest` automatically.
+          flavor: |
+            latest=auto
+
+      - name: Build and push (linux/amd64, linux/arm64)
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        env:
+          # Let Trivy pull the just-pushed (possibly private) image from GHCR.
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          # Report findings to the Security tab; don't fail the release on them.
+          exit-code: "0"
+
+      - name: Upload Trivy results to the Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif

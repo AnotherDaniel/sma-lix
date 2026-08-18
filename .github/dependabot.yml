@@ -1,0 +1,24 @@
+# Keeps GitHub Actions and Hex dependencies up to date via automated PRs.
+# See: https://docs.github.com/code-security/dependabot
+version: 2
+updates:
+  # GitHub Actions used by the CI/release workflows.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      # One PR for all action bumps to keep noise down.
+      github-actions:
+        patterns: ["*"]
+
+  # Elixir/Hex dependencies (mix.exs / mix.lock).
+  - package-ecosystem: "mix"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      # Group minor/patch bumps together; majors still get their own PR.
+      hex-minor-patch:
+        update-types: ["minor", "patch"]

@@ -18,7 +18,12 @@ defmodule SmaLix.MixProject do
       package: package(),
       name: "SmaLix",
       source_url: @source_url,
-      docs: [main: "readme", extras: ["README.md"]]
+      docs: [main: "readme", extras: ["README.md", "LICENSE"]],
+      dialyzer: [
+        # Keep PLTs in a stable, cacheable location for CI.
+        plt_local_path: "priv/plts",
+        plt_core_path: "priv/plts"
+      ]
     ]
   end
 
@@ -35,7 +40,9 @@ defmodule SmaLix.MixProject do
       {:req, "~> 0.5"},
       {:tortoise311, "~> 0.12"},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
     ]
   end
 

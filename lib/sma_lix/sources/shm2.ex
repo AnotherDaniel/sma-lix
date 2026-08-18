@@ -120,7 +120,9 @@ defmodule SmaLix.Sources.SHM2 do
   end
 
   # Sorts measurement keys into topic hierarchies, mirroring the upstream
-  # if/elif ladder exactly (order matters).
+  # if/elif ladder exactly (order matters). The flat ladder is intentionally a
+  # single function, so the cyclomatic-complexity check is waived here.
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defp topic(key, serial, prefix) do
     p = "#{prefix}#{serial}"
 

@@ -81,6 +81,9 @@ defmodule SmaLix.Sinks.GenHaSensors do
 
   # ── Home Assistant class mappings (from smahub gen_ha_sensors.py) ────────────
 
+  # Flat unit → HA device-class lookup mirroring upstream; the complexity check
+  # is waived because splitting the table would not improve readability.
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defp device_class(unit) do
     case unit do
       u when u in ["Wh", "kWh"] -> "energy"

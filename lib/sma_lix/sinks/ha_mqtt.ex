@@ -181,13 +181,13 @@ defmodule SmaLix.Sinks.HaMqtt do
     raw = strip_unit(value)
 
     payload =
-      if not has_unit do
+      if has_unit do
+        raw
+      else
         case Helpers.status_string(raw) do
           "" -> raw
           text -> text
         end
-      else
-        raw
       end
 
     Tortoise311.publish(client_id, topic, to_string(payload), qos: 0, retain: true)
