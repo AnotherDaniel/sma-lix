@@ -3,7 +3,7 @@
 # Image tags are build args so you can match your target Erlang/Elixir; the
 # defaults are recent stable slim images. Override with:
 #   docker build --build-arg ELIXIR_IMAGE=... --build-arg RUNTIME_IMAGE=... .
-ARG ELIXIR_IMAGE=hexpm/elixir:1.18.4-erlang-27.3.4-debian-bookworm-20250630-slim
+ARG ELIXIR_IMAGE=hexpm/elixir:1.18.4-erlang-27.3.4-debian-bookworm-20260610-slim
 ARG RUNTIME_IMAGE=debian:bookworm-slim
 
 # ── Build stage ──────────────────────────────────────────────────────────────
