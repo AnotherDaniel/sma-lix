@@ -44,7 +44,6 @@ defmodule SmaLix.Sources.SHM2 do
   end
 
   @impl true
-  @impl true
   def handle_message({:udp_passive, socket}, state) do
     :inet.setopts(socket, active: 100)
     {:noreply, state}
